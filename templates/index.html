@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BiDirectional Intelligence System</title>
+  <meta name="description" content="Bi-Directional Data Processing System — transforms unstructured text into structured, ML-powered medical intelligence." />
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+
+{% if show_login %}
+<div class="login-container">
+  <div class="login-card">
+    <div class="logo-wrap" style="justify-content: center; margin-bottom: 24px;">
+      <span class="logo-icon">⚡</span>
+      <span class="logo-text" style="font-size: 18px;">Bi-Directional Intelligence</span>
+    </div>
+    <div id="loginSection">
+      <h2 style="text-align: center; margin-bottom: 20px; font-weight: 600;">Secure Access</h2>
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, msg in messages %}
+            <div class="{% if category == 'success' %}success-msg{% else %}error-msg{% endif %}">{{ msg }}</div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+      <form method="POST" action="/login" class="login-form">
+        <input type="text" name="username" placeholder="Username" required class="login-input" />
+        <div class="input-wrap">
+          <input type="password" name="password" id="loginPassword" placeholder="Password" required class="login-input" />
+          <button type="button" class="eye-btn" onclick="togglePassword('loginPassword', this)">👁️</button>
+        </div>
+        <button type="submit" class="send-btn" style="width: 100%; border-radius: 8px;">Login</button>
+      </form>
+      <p style="text-align: center; margin-top: 16px; font-size: 13px; color: var(--text-dim);">
+        Don't have an account? <a href="javascript:void(0)" onclick="toggleAuth('signup')" style="color: var(--accent); text-decoration: none; font-weight: 600;">Sign up</a>
+      </p>
+      <p style="text-align: center; margin-top: 8px; font-size: 11px; color: var(--text-dim);">Default credentials: admin / password</p>
+    </div>
+
+    <div id="signupSection" style="display: none;">
+      <h2 style="text-align: center; margin-bottom: 20px; font-weight: 600;">Create Account</h2>
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, msg in messages %}
+            <div class="{% if category == 'success' %}success-msg{% else %}error-msg{% endif %}">{{ msg }}</div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+      <form method="POST" action="/signup" class="login-form">
+        <div class="input-wrap">
+          <input type="text" name="username" id="signupUsername" placeholder="Choose Username" required class="login-input" onkeyup="checkUsernameValid()" />
+          <span class="validation-icon" id="usernameIcon"></span>
+        </div>
+        <div class="input-wrap">
+          <input type="password" name="password" id="signupPassword" placeholder="Choose Password" required class="login-input" pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}" title="Must contain at least one number and one uppercase and lowercase letter, and at least 8 or more characters" oninput="checkPasswordValid()" />
+          <span class="validation-icon" id="passwordIcon"></span>
+          <button type="button" class="eye-btn" onclick="togglePassword('signupPassword', this)">👁️</button>
+        </div>
+        <button type="submit" class="send-btn" style="width: 100%; border-radius: 8px;">Sign Up</button>
+      </form>
+      <p style="text-align: center; margin-top: 16px; font-size: 13px; color: var(--text-dim);">
+        Already have an account? <a href="javascript:void(0)" onclick="toggleAuth('login')" style="color: var(--accent); text-decoration: none; font-weight: 600;">Log in</a>
+      </p>
+    </div>
+
+  </div>
+</div>
+
+<script>
+function toggleAuth(mode) {
+  if (mode === 'signup') {
+    document.getElementById('loginSection').style.display = 'none';
+    document.getElementById('signupSection').style.display = 'block';
+  } else {
+    document.getElementById('loginSection').style.display = 'block';
+    document.getElementById('signupSection').style.display = 'none';
+  }
+}
+
+function togglePassword(id, btn) {
+  const input = document.getElementById(id);
+  if (input.type === 'password') {
+    input.type = 'text';
+    btn.textContent = '🙈';
+  } else {
+    input.type = 'password';
+    btn.textContent = '👁️';
+  }
+}
+
+let userCheckTimer;
+function checkUsernameValid() {
+  const input = document.getElementById('signupUsername');
+  const icon = document.getElementById('usernameIcon');
+  const val = input.value.trim();
+  
+  if (!val) {
+    input.classList.remove('input-valid', 'input-invalid');
+    icon.textContent = '';
+    return;
+  }
+
+  clearTimeout(userCheckTimer);
+  userCheckTimer = setTimeout(() => {
+    fetch(`/api/check_username?u=${encodeURIComponent(val)}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.available) {
+          input.classList.remove('input-invalid');
+          input.classList.add('input-valid');
+          icon.textContent = '✅';
+        } else {
+          input.classList.remove('input-valid');
+          input.classList.add('input-invalid');
+          icon.textContent = '❌';
+        }
+      });
+  }, 400);
+}
+
+function checkPasswordValid() {
+  const input = document.getElementById('signupPassword');
+  const icon = document.getElementById('passwordIcon');
+  const val = input.value;
+  
+  if (!val) {
+    input.classList.remove('input-valid', 'input-invalid');
+    icon.textContent = '';
+    return;
+  }
+  
+  const regex = /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}$/;
+  if (regex.test(val)) {
+    input.classList.remove('input-invalid');
+    input.classList.add('input-valid');
+    icon.textContent = '✅';
+  } else {
+    input.classList.remove('input-valid');
+    input.classList.add('input-invalid');
+    icon.textContent = '❌';
+  }
+}
+</script>
+{% else %}
+
+<!-- ════════════════════════════════════════════
+     SIDEBAR
+════════════════════════════════════════════ -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <div class="logo-wrap">
+      <span class="logo-icon">⚡</span>
+      <span class="logo-text">Bi-Directional Data Intelligence</span>
+    </div>
+    <button class="sidebar-toggle" id="sidebarToggle" title="Collapse sidebar">‹</button>
+  </div>
+
+  <a href="/" class="new-chat-btn" id="newChatBtn">
+    <span class="btn-icon">＋</span>
+    <span class="btn-label">New Session</span>
+  </a>
+
+  <div class="sidebar-section-label">Sessions</div>
+
+  <div class="chat-list" id="chatList">
+    {% for s in sessions %}
+    <div class="chat-item {% if s[0]|string == session_id|string %}active{% endif %}" id="session-{{ s[0] }}">
+      <a href="/?session_id={{ s[0] }}" class="chat-link">
+        <span class="chat-icon">💬</span>
+        <span class="chat-title">{{ s[1] or "New Session" }}</span>
+        <span class="chat-count">{{ s[2] }}</span>
+      </a>
+      <button class="del-btn" title="Delete session"
+              data-sid="{{ s[0] }}" data-current="{{ session_id or '' }}">🗑</button>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="sidebar-footer">
+    <span>🧠 Naïve Bayes · Flask · MySQL</span>
+  </div>
+</aside>
+
+<!-- ════════════════════════════════════════════
+     MAIN CONTENT
+════════════════════════════════════════════ -->
+<main class="main" id="main">
+
+  <!-- TOP BAR -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <button class="hamburger" id="hamburger">☰</button>
+      <div class="topbar-title">
+        <h1>Bi-Directional Intelligence System</h1>
+        <p class="topbar-sub">Unstructured Text → NLP → ML Prediction → Insight</p>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="search-wrap">
+        <input type="text" id="searchInput" placeholder="🔍  Search records…" />
+        <div class="search-results" id="searchResults"></div>
+      </div>
+      <span class="clock" id="clock">{{ now }}</span>
+      <a href="/logout" class="logout-btn" title="Logout">🚪</a>
+    </div>
+  </header>
+
+  <!-- MESSAGES FEED -->
+  <div class="messages-feed" id="messagesFeed">
+
+    <!-- PIPELINE BANNER (shown when no messages) -->
+    {% if not messages %}
+    <div class="pipeline-banner" id="pipelineBanner">
+      <h2 class="pipeline-title">How the system works</h2>
+      <div class="pipeline-steps">
+        <div class="pipe-step">
+          <div class="pipe-icon">📝</div>
+          <div class="pipe-label">Input</div>
+          <div class="pipe-desc">Unstructured text / uploaded file</div>
+        </div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-step">
+          <div class="pipe-icon">🔍</div>
+          <div class="pipe-label">NLP Extraction</div>
+          <div class="pipe-desc">Name · Age · Condition · Symptoms</div>
+        </div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-step">
+          <div class="pipe-icon">🧹</div>
+          <div class="pipe-label">Cleaning</div>
+          <div class="pipe-desc">Normalise · Remove noise</div>
+        </div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-step">
+          <div class="pipe-icon">🔢</div>
+          <div class="pipe-label">Vectorize</div>
+          <div class="pipe-desc">Bag-of-Words (BoW)</div>
+        </div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-step">
+          <div class="pipe-icon">🤖</div>
+          <div class="pipe-label">ML Model</div>
+          <div class="pipe-desc">Multinomial Naïve Bayes</div>
+        </div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-step">
+          <div class="pipe-icon">💡</div>
+          <div class="pipe-label">Insight</div>
+          <div class="pipe-desc">Prediction + Recommendation</div>
+        </div>
+      </div>
+      <p class="pipeline-hint">Type or upload a patient description below to begin.</p>
+    </div>
+    {% endif %}
+
+    {% for msg in messages %}
+    {% set parts = msg[1].split('|') %}
+    {% set name      = parts[0] if parts|length > 0 else 'N/A' %}
+    {% set age       = parts[1] if parts|length > 1 else 'N/A' %}
+    {% set condition = parts[2] if parts|length > 2 else 'N/A' %}
+    {% set symptom   = parts[3] if parts|length > 3 else 'N/A' %}
+
+    <!-- USER BUBBLE -->
+    <div class="bubble-row user-row">
+      <div class="bubble user-bubble">
+        <div class="bubble-meta">You · Patient Input</div>
+        <div class="bubble-text">{{ msg[0] }}</div>
+      </div>
+      <div class="avatar user-avatar">👤</div>
+    </div>
+
+    <!-- BOT CARD -->
+    <div class="bubble-row bot-row">
+      <div class="avatar bot-avatar">🤖</div>
+      <div class="result-card">
+
+        <!-- ── TABS ── -->
+        <div class="tab-bar">
+          <button class="tab-btn active" data-tab="structured">📊 Structured</button>
+          <button class="tab-btn" data-tab="summary">📝 Summary</button>
+          <button class="tab-btn" data-tab="prediction">🤖 Prediction</button>
+          <button class="tab-btn" data-tab="backward">🔄 Backward Flow</button>
+        </div>
+
+        <!-- TAB: Structured Data -->
+        <div class="tab-content active" data-content="structured">
+          <div class="section-label">Extracted Structured Data</div>
+          <table class="data-table">
+            <thead>
+              <tr><th>Field</th><th>Extracted Value</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="field-badge name-badge">Name</span></td>
+                <td>{{ name }}</td>
+              </tr>
+              <tr>
+                <td><span class="field-badge age-badge">Age</span></td>
+                <td>{{ age }}</td>
+              </tr>
+              <tr>
+                <td><span class="field-badge cond-badge">Condition</span></td>
+                <td>{{ condition }}</td>
+              </tr>
+              <tr>
+                <td><span class="field-badge sym-badge">Symptoms</span></td>
+                <td>{{ symptom }}</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="pipe-raw">
+            <span class="pipe-raw-label">DB-Ready Format:</span>
+            <code>{{ msg[1] }}</code>
+          </div>
+        </div>
+
+        <!-- TAB: Summary -->
+        <div class="tab-content" data-content="summary">
+          <div class="section-label">Human-Readable Summary</div>
+          <div class="summary-card">
+            <span class="summary-quote">❝</span>
+            <p>{{ msg[2] }}</p>
+            <span class="summary-quote right">❞</span>
+          </div>
+        </div>
+
+        <!-- TAB: Prediction -->
+        <div class="tab-content" data-content="prediction">
+          <div class="section-label">ML Prediction — Multinomial Naïve Bayes</div>
+          <div class="prediction-hero">
+            <div class="pred-disease">{{ msg[4] }}</div>
+            <div class="pred-conf-wrap">
+              <span class="pred-conf-label">Confidence</span>
+              <div class="conf-bar-outer">
+                <div class="conf-bar-inner" data-target-width="{{ msg[5] }}%"></div>
+              </div>
+              <span class="pred-conf-val">{{ msg[5] }}%</span>
+            </div>
+          </div>
+          <!-- ADAPTIVE LEARNING FEEDBACK -->
+          <div class="feedback-section" id="feedback-{{ loop.index }}">
+            <div class="section-label" style="margin-top: 18px;">Adaptive Learning Feedback</div>
+            <p class="feedback-desc">Did the system predict correctly? Your feedback improves the model dynamically.</p>
+            <div class="feedback-actions">
+              <button class="feedback-btn confirm-btn" 
+                      data-symptoms="{{ msg[0] | forceescape }}" 
+                      data-condition="{{ msg[4] | forceescape }}"
+                      onclick="submitFeedback(this.getAttribute('data-symptoms'), this.getAttribute('data-condition'), 'feedback-{{ loop.index }}')">
+                ✅ Confirm Diagnosis
+              </button>
+              <div class="correct-cond-wrap">
+                <input type="text" placeholder="Or enter correct diagnosis..." class="correct-input" id="correct-input-{{ loop.index }}" />
+                <button class="feedback-btn correct-btn" 
+                        data-symptoms="{{ msg[0] | forceescape }}"
+                        onclick="submitFeedback(this.getAttribute('data-symptoms'), document.getElementById('correct-input-{{ loop.index }}').value, 'feedback-{{ loop.index }}')">
+                  Update
+                </button>
+              </div>
+            </div>
+            <div class="feedback-msg" id="feedback-msg-{{ loop.index }}" style="display:none;"></div>
+          </div>
+        </div>
+
+        <!-- TAB: Backward Flow -->
+        <div class="tab-content" data-content="backward">
+          <div class="section-label">Backward Flow — Structured → Human Explanation</div>
+          <div class="backward-card">{{ msg[6] | safe }}</div>
+        </div>
+
+      </div><!-- /.result-card -->
+    </div><!-- /.bot-row -->
+
+    {% endfor %}
+    <!-- CHART PANEL (shown when data exists) -->
+    {% if chart_labels %}
+    <div class="chart-panel" style="margin: 0; width: 100%;">
+      <div class="chart-title">📊 Disease Distribution — Current Session</div>
+      <canvas id="diseaseChart" height="120"></canvas>
+    </div>
+    {% endif %}
+
+  </div><!-- /#messagesFeed -->
+
+  <!-- INPUT FORM -->
+  <form method="POST" action="{% if session_id %}/?session_id={{ session_id }}{% else %}/{% endif %}"
+        class="input-form" id="inputForm" enctype="multipart/form-data">
+
+    <div class="input-row">
+      <!-- File upload -->
+      <label class="file-label" for="fileInput" title="Upload .txt file">
+        📎
+        <input type="file" name="file" id="fileInput" accept=".txt,.csv" />
+      </label>
+
+      <!-- Text input -->
+      <textarea name="text" id="textInput"
+                placeholder="Describe the patient: name, age, condition, symptoms…"
+                rows="1"
+                oninput="autoResize(this)"></textarea>
+
+      <!-- Send button -->
+      <button type="submit" class="send-btn" id="sendBtn">
+        <span class="send-icon">➤</span>
+      </button>
+    </div>
+
+    <div class="input-hint">
+      e.g. "Patient John, 35, diagnosed with malaria. Symptoms: fever, headache, chills."
+    </div>
+  </form>
+
+</main><!-- /.main -->
+{% endif %}
+
+<!-- ════════════════════════════════════════════
+     SCRIPTS
+════════════════════════════════════════════ -->
+<script>
+// ── Auto-resize textarea
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 160) + 'px';
+}
+
+// ── Scroll to bottom on load
+window.addEventListener('DOMContentLoaded', () => {
+  const feed = document.getElementById('messagesFeed');
+  if (feed) feed.scrollTop = feed.scrollHeight;
+
+  // Animate confidence bars
+  document.querySelectorAll('.conf-bar-inner').forEach(bar => {
+    const target = bar.dataset.targetWidth;
+    bar.style.width = '0%';
+    setTimeout(() => { bar.style.width = target; }, 300);
+  });
+
+  // Live clock
+  const clockEl = document.getElementById('clock');
+  function updateClock() {
+    const now = new Date();
+    if (clockEl) clockEl.textContent = now.toLocaleString();
+  }
+  updateClock();
+  setInterval(updateClock, 1000);
+
+  // Tab switching
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const card    = btn.closest('.result-card');
+      const target  = btn.dataset.tab;
+      card.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      card.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
+      card.querySelector(`[data-content="${target}"]`).classList.add('active');
+    });
+  });
+
+  // Sidebar toggle
+  const sidebar = document.getElementById('sidebar');
+  const main    = document.getElementById('main');
+  const toggle  = document.getElementById('sidebarToggle');
+  const burger  = document.getElementById('hamburger');
+
+  function toggleSidebar() {
+    sidebar.classList.toggle('collapsed');
+    main.classList.toggle('sidebar-collapsed');
+  }
+  if (toggle)  toggle.addEventListener('click',  toggleSidebar);
+  if (burger)  burger.addEventListener('click',  toggleSidebar);
+
+  // File input label feedback
+  const fileInput = document.getElementById('fileInput');
+  const fileLabel = document.querySelector('.file-label');
+  if (fileInput) {
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files.length > 0) {
+        fileLabel.classList.add('file-chosen');
+        fileLabel.title = fileInput.files[0].name;
+      }
+    });
+  }
+
+  // Send button loading state
+  const form    = document.getElementById('inputForm');
+  const sendBtn = document.getElementById('sendBtn');
+  if (form) {
+    form.addEventListener('submit', () => {
+      sendBtn.disabled = true;
+      sendBtn.innerHTML = '<span class="spinner"></span>';
+    });
+  }
+  // Delete session buttons
+  document.querySelectorAll('.del-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const sid = btn.dataset.sid;
+      const currentSession = btn.dataset.current || null;
+      deleteSession(sid, currentSession);
+    });
+  });
+});
+
+// ── Delete session via fetch (avoids form+confirm() blocking)
+function deleteSession(sid, currentSession) {
+
+  fetch('/delete_session/' + sid, {
+    method: 'POST',
+    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+  })
+  .then(function(r) {
+    if (r.ok) {
+      const el = document.getElementById('session-' + sid);
+      if (el) el.remove();
+      // If we deleted the session we're currently viewing, go home
+      if (sid == currentSession) {
+        window.location.href = '/';
+      }
+    } else {
+      alert('Failed to delete session. Please try again.');
+    }
+  })
+  .catch(function() {
+    alert('Network error. Please check your connection.');
+  });
+}
+
+// ── Adaptive Learning Feedback
+function submitFeedback(symptoms, condition, containerId) {
+  if (!condition) return;
+  fetch('/api/feedback', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ symptoms: symptoms, condition: condition })
+  }).then(r => r.json()).then(data => {
+    if (data.status === 'success') {
+      const msgDiv = document.getElementById('feedback-msg-' + containerId.split('-')[1]);
+      msgDiv.innerHTML = '<strong>Success:</strong> Feedback received. Model retrained and adapted!';
+      msgDiv.style.display = 'block';
+    }
+  });
+}
+
+// ── Live Search
+function escapeHTML(str) {
+  return str.replace(/[&<>'"]/g, tag => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    "'": '&#39;',
+    '"': '&quot;'
+  }[tag] || tag));
+}
+
+const searchInput   = document.getElementById('searchInput');
+const searchResults = document.getElementById('searchResults');
+let searchTimer;
+
+if (searchInput) {
+  searchInput.addEventListener('input', () => {
+    clearTimeout(searchTimer);
+    const q = searchInput.value.trim();
+    if (!q) { searchResults.classList.remove('visible'); return; }
+    searchTimer = setTimeout(() => {
+      fetch(`/search?q=${encodeURIComponent(q)}`)
+        .then(r => r.json())
+        .then(data => {
+          if (!data.length) {
+            searchResults.innerHTML = '<div class="sr-item">No results found.</div>';
+          } else {
+            searchResults.innerHTML = data.map(r =>
+              `<a href="/?session_id=${r.session_id}" class="sr-item">
+                <strong>${r.prediction}</strong> · ${escapeHTML(r.user_text.slice(0, 60))}…
+              </a>`
+            ).join('');
+          }
+          searchResults.classList.add('visible');
+        });
+    }, 350);
+  });
+
+  document.addEventListener('click', e => {
+    if (!searchInput.contains(e.target)) searchResults.classList.remove('visible');
+  });
+}
+</script>
+{% if chart_labels %}
+<script type="application/json" id="chartLabelsData">
+  {{ chart_labels | tojson }}
+</script>
+<script type="application/json" id="chartValuesData">
+  {{ chart_values | tojson }}
+</script>
+<script>
+const ctx = document.getElementById('diseaseChart').getContext('2d');
+const chartLabels = JSON.parse(document.getElementById('chartLabelsData').textContent);
+const chartValues = JSON.parse(document.getElementById('chartValuesData').textContent);
+
+new Chart(ctx, {
+  type: 'doughnut',
+  data: {
+    labels: chartLabels,
+    datasets: [{
+      label: 'Predicted Diseases',
+      data: chartValues,
+      backgroundColor: [
+        '#6366f1','#22d3ee','#f59e0b','#ef4444',
+        '#10b981','#8b5cf6','#f97316','#ec4899','#14b8a6'
+      ],
+      borderColor: '#0f172a',
+      borderWidth: 3,
+      hoverOffset: 10
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: {
+        labels: { color: '#e2e8f0', font: { family: 'Inter', size: 13 } }
+      }
+    }
+  }
+});
+
+</script>
+{% endif %}
+
+</body>
+</html>

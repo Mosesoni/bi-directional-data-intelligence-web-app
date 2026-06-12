@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Search</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<div class="container">
+    <h1>Search Records</h1>
+
+    <a href="/">← Home</a>
+
+    <form method="POST">
+        <input type="text" name="keyword" placeholder="Enter keyword..." required>
+        <button type="submit">Search</button>
+    </form>
+
+    {% if results %}
+        <table border="1" width="100%" style="margin-top:20px;">
+            <tr>
+                <th>ID</th>
+                <th>Input</th>
+                <th>Keywords</th>
+                <th>Summary</th>
+            </tr>
+
+            {% for row in results %}
+            <tr>
+                <td>{{ row[0] }}</td>
+                <td>{{ row[1] }}</td>
+                <td>{{ row[2] }}</td>
+                <td>{{ row[3] }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    {% endif %}
+</div>
+
+</body>
+</html>
