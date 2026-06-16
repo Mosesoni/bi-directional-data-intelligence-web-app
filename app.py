@@ -433,6 +433,9 @@ def process_text(text):
         m = re.search(pat, raw, re.IGNORECASE)
         if m:
             name = m.group(1).strip().title()
+            name = re.sub(r"^(?:patient\s+)+", "", name, flags=re.IGNORECASE).strip()
+            if not name:
+                name = "Not specified"
             break
 
     # ── Age detection
